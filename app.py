@@ -56,13 +56,13 @@ def predict():
         dest_code = data.get('destination_station', '')
         journey_date = data.get('journey_date', datetime.today().strftime('%Y-%m-%d'))
         waitlist_num = int(data.get('waitlist_number', 10))
-        coach_type = int(data.get('coach_type', 1))
+        travel_class = int(data.get('coach_type', 1))  # 0: SL, 1: 3AC, 2: 2AC, 3: 1AC
         quota = int(data.get('quota', 0))
         train_type = 0 
 
         days_left = calculate_days_left(journey_date)
 
-        # STRICT REAL-WORLD RULE: If traveling tomorrow (0-2 days out) with WL > 10, confirmation is practically impossible
+        # Strict real-world guardrails
         if days_left <= 2 and waitlist_num > 10:
             prob_rounded = 4.5
             status = "High Risk of Waitlist / Cancellation"
@@ -70,10 +70,15 @@ def predict():
             route_tier = evaluate_route_tier(src_code, dest_code)
             is_festival = check_is_festival(journey_date)
 
-            features = pd.DataFrame([[route_tier, days_left, waitlist_num, train_type, coach_type, quota, is_festival]],
+            # Explicitly mapping columns to match model training features: ['route_tier', 'days_left', 'waitlist_num', 'train_type', 'class', 'quota', 'is_festival']
+            features = pd.DataFrame([[route_tier, days_left, waitlist_num, train_type, travel_class, quota, is_festival]],
                                     columns=['route_tier', 'days_left', 'waitlist_num', 'train_type', 'class', 'quota', 'is_festival'])
             
-            prediction_prob = model.predict_proba(features)[0][1] * 100
+            # Apply class-specific modifier weights to ensure 1AC/2AC behave differently from Sleeper
+            class_penalty = {0: 5.0, 1: 0.0, 2: -8.0, 3: -18.0}.get(travel_class, 0.0)
+
+            prediction_prob = (model.predict_proba(features)[0][1] * 100) + class_penalty
+            prediction_prob = np.clip(prediction_prob, 1.0, 99.0)
             prob_rounded = round(float(prediction_prob), 2)
             
             status = "High Chance of Confirmation" if prob_rounded > 50 else "High Risk of Waitlist / Cancellation"
