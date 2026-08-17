@@ -59,8 +59,7 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Journey Date (Max 60 Days)</label>
-                            <!-- Date bounds restricted to Today and 60 days out -->
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Journey Date</label>
                             <input type="date" id="journey_date" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                         </div>
                         <div>
@@ -124,53 +123,81 @@
         </div>
     </main>
 
-    <!-- Frontend Script -->
     <script>
-        // Automatically enforce 60-day booking window constraints on date picker
-        document.addEventListener('DOMContentLoaded', () => {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const minDate = `${yyyy}-${mm}-${dd}`;
+        // --- 1. DYNAMIC DATE LOGIC FOR TATKAL & GENERAL ---
+        const quotaSelect = document.getElementById('quota');
+        const dateInput = document.getElementById('journey_date');
 
-            // Calculate date 60 days from today
+        function enforceDateRules() {
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(today.getDate() + 1);
+
+            const formatDate = (date) => {
+                const yyyy = date.getFullYear();
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const dd = String(date.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            };
+
+            const todayStr = formatDate(today);
+            const tomorrowStr = formatDate(tomorrow);
+            
             const maxDateObj = new Date();
             maxDateObj.setDate(today.getDate() + 60);
-            const max_yyyy = maxDateObj.getFullYear();
-            const max_mm = String(maxDateObj.getMonth() + 1).padStart(2, '0');
-            const max_dd = String(maxDateObj.getDate()).padStart(2, '0');
-            const maxDate = `${max_yyyy}-${max_mm}-${max_dd}`;
+            const maxDateStr = formatDate(maxDateObj);
 
-            const dateInput = document.getElementById('journey_date');
-            dateInput.min = minDate;
-            dateInput.max = maxDate;
-        });
+            if (quotaSelect.value === "1") {
+                // Tatkal Mode: Lock exactly to tomorrow
+                dateInput.min = tomorrowStr;
+                dateInput.max = tomorrowStr;
+                dateInput.value = tomorrowStr;
+            } else {
+                // General Mode: 0 to 60 days
+                dateInput.min = todayStr;
+                dateInput.max = maxDateStr;
+            }
+        }
 
+        quotaSelect.addEventListener('change', enforceDateRules);
+        document.addEventListener('DOMContentLoaded', enforceDateRules);
+
+        // --- 2. AGGRESSIVE 7000+ STATION LOADER ---
         let stationsData = [
             {name: "New Delhi", code: "NDLS"}, {name: "Patna Junction", code: "PNBE"},
             {name: "Mumbai CSMT", code: "CSMT"}, {name: "Howrah Junction", code: "HWH"},
-            {name: "Kanpur Central", code: "CNB"}, {name: "Ghaziabad", code: "GZB"},
-            {name: "Lucknow Charbagh", code: "LKO"}, {name: "Varanasi Junction", code: "BSB"},
-            {name: "Gorakhpur Junction", code: "GKP"}, {name: "Ahmedabad Junction", code: "ADI"},
-            {name: "Bangalore City", code: "SBC"}, {name: "Chennai Central", code: "MAS"},
-            {name: "Hyderabad Decan", code: "HYB"}, {name: "Anand Vihar Terminal", code: "ANVT"},
-            {name: "Hazrat Nizamuddin", code: "NZM"}, {name: "Old Delhi", code: "DLI"},
-            {name: "Mumbai Central", code: "BCT"}, {name: "Pune Junction", code: "PUNE"},
-            {name: "Jaipur Junction", code: "JP"}, {name: "Prayagraj Junction (Allahabad)", code: "PRYJ"},
-            {name: "Allahabad Junction", code: "PRYJ"}, {name: "Danapur", code: "DNR"},
-            {name: "Barauni Junction", code: "BJU"}, {name: "Prayagraj Rambag", code: "PRRB"}
+            {name: "Prayagraj Junction (Allahabad)", code: "PRYJ"}, {name: "Kanpur Central", code: "CNB"}
         ];
 
-        fetch('/stations.json')
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data) && data.length > 0) {
-                    stationsData = stationsData.concat(data);
-                }
-            })
-            .catch(err => console.log("Using built-in station list."));
+        function parseAndLoadStations(data) {
+            if (data.features) { 
+                stationsData = data.features.map(f => ({ name: f.properties.name, code: f.properties.code }));
+            } else if (Array.isArray(data)) {
+                stationsData = data;
+            } else if (typeof data === 'object') {
+                stationsData = Object.keys(data).map(key => ({ 
+                    code: key, 
+                    name: typeof data[key] === 'object' ? (data[key].name || data[key].stationName) : data[key] 
+                }));
+            }
+        }
 
+        // Layer 1: Try Local File. Layer 2: Try Web Database Fallback.
+        fetch('/stations.json')
+            .then(res => {
+                if(!res.ok) throw new Error("Local file failed");
+                return res.json();
+            })
+            .then(data => parseAndLoadStations(data))
+            .catch(err => {
+                console.log("Local stations.json blocked. Falling back to official web DB...");
+                fetch('https://gist.githubusercontent.com/apsdehal/11393083/raw/stations.json')
+                    .then(res => res.json())
+                    .then(data => parseAndLoadStations(data))
+                    .catch(e => console.log("Web fetch failed too. Using built-in minimal fallback."));
+            });
+
+        // --- 3. AUTOCOMPLETE ENGINE ---
         function setupAutocomplete(displayId, hiddenId, suggestionsId) {
             const displayInput = document.getElementById(displayId);
             const hiddenInput = document.getElementById(hiddenId);
@@ -186,11 +213,12 @@
                     return;
                 }
 
+                // Increased limit to 50 results to show more Tier 2/3 stations
                 const matches = stationsData.filter(stn => {
                     const name = (stn.name || stn.stationName || '').toLowerCase();
                     const code = (stn.code || stn.stationCode || '').toLowerCase();
                     return name.includes(query) || code.includes(query);
-                }).slice(0, 30); 
+                }).slice(0, 50); 
 
                 if (matches.length > 0) {
                     suggestionsBox.classList.remove('hidden');
@@ -227,6 +255,7 @@
         setupAutocomplete('source_station_display', 'source_station', 'source_suggestions');
         setupAutocomplete('dest_station_display', 'destination_station', 'dest_suggestions');
 
+        // --- 4. PREDICTION SUBMIT LOGIC ---
         document.getElementById('predictionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -300,3 +329,4 @@
     </script>
 </body>
 </html>
+
