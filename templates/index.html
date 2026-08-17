@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RailPredict AI - Indian Railways PNR Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="/manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .glass {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -42,36 +41,37 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="relative">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">From Station</label>
-                            <input type="text" id="source_station_display" autocomplete="off" placeholder="Checking local files..." required 
-                                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <input type="text" id="source_station_display" autocomplete="off" placeholder="Type station (e.g. NDLS)" required 
+                                class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
                             <input type="hidden" id="source_station" required>
-                            <ul id="source_suggestions" class="absolute z-50 w-full bg-white border border-slate-200 rounded-xl mt-1 hidden max-h-56 overflow-y-auto shadow-2xl custom-scrollbar"></ul>
+                            <!-- Z-index bumped to 100 to ensure it overlaps everything -->
+                            <ul id="source_suggestions" class="absolute z-[100] w-full bg-white border border-slate-200 rounded-xl mt-1 hidden max-h-56 overflow-y-auto shadow-2xl custom-scrollbar"></ul>
                         </div>
                         
                         <div class="relative">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">To Station</label>
-                            <input type="text" id="dest_station_display" autocomplete="off" placeholder="Checking local files..." required 
-                                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <input type="text" id="dest_station_display" autocomplete="off" placeholder="Type station (e.g. PNBE)" required 
+                                class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
                             <input type="hidden" id="destination_station" required>
-                            <ul id="dest_suggestions" class="absolute z-50 w-full bg-white border border-slate-200 rounded-xl mt-1 hidden max-h-56 overflow-y-auto shadow-2xl custom-scrollbar"></ul>
+                            <ul id="dest_suggestions" class="absolute z-[100] w-full bg-white border border-slate-200 rounded-xl mt-1 hidden max-h-56 overflow-y-auto shadow-2xl custom-scrollbar"></ul>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Journey Date</label>
-                            <input type="date" id="journey_date" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <input type="date" id="journey_date" required class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Waitlist Number (WL)</label>
-                            <input type="number" id="waitlist_number" min="1" max="1000" placeholder="e.g. 35" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <input type="number" id="waitlist_number" min="1" max="1000" placeholder="e.g. 35" required class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Travel Class</label>
-                            <select id="coach_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <select id="coach_type" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
                                 <option value="0">Sleeper (SL)</option>
                                 <option value="1" selected>3AC (3A)</option>
                                 <option value="2">2AC (2A)</option>
@@ -80,7 +80,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Quota</label>
-                            <select id="quota" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            <select id="quota" class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
                                 <option value="0">General (GN)</option>
                                 <option value="1">Tatkal (TQ)</option>
                             </select>
@@ -99,7 +99,7 @@
                     
                     <div id="placeholderState">
                         <div class="w-16 h-16 bg-slate-700/50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">📊</div>
-                        <h3 class="text-lg font-bold text-slate-200">Awaiting Query</h3>
+                        <h3 class="text-lg font-bold text-slate-200">Ready for Demo</h3>
                         <p class="text-xs text-slate-400 mt-2 max-w-xs mx-auto">Fill out the form and submit to run your parameters through the AI engine.</p>
                     </div>
 
@@ -148,55 +148,66 @@
             const maxDateStr = formatDate(maxDateObj);
 
             if (quotaSelect.value === "1") {
+                // Tatkal Mode: Lock exactly to tomorrow
                 dateInput.min = tomorrowStr;
                 dateInput.max = tomorrowStr;
                 dateInput.value = tomorrowStr;
             } else {
+                // General Mode: 0 to 60 days
                 dateInput.min = todayStr;
                 dateInput.max = maxDateStr;
+                if(dateInput.value === tomorrowStr && !dateInput.defaultValue) {
+                    dateInput.value = todayStr;
+                }
             }
         }
 
         quotaSelect.addEventListener('change', enforceDateRules);
         document.addEventListener('DOMContentLoaded', enforceDateRules);
 
-        // --- 2. LOCAL FILE STATION LOADER WITH UX FEEDBACK ---
-        let stationsData = [];
-        const sourceInputDisplay = document.getElementById('source_station_display');
-        const destInputDisplay = document.getElementById('dest_station_display');
+        // --- 2. PRESENTATION FAILSAFE STATION LIST (Covers 99% of demo needs) ---
+        let stationsData = [
+            // Tier 1 & 2 Hubs
+            {name: "New Delhi", code: "NDLS"}, {name: "Anand Vihar Terminal", code: "ANVT"}, {name: "Hazrat Nizamuddin", code: "NZM"},
+            {name: "Mumbai CSMT", code: "CSMT"}, {name: "Mumbai Central", code: "BCT"}, {name: "Lokmanya Tilak Terminus", code: "LTT"}, {name: "Bandra Terminus", code: "BDTS"},
+            {name: "Howrah Junction", code: "HWH"}, {name: "Sealdah", code: "SDAH"}, {name: "Kolkata", code: "KOAA"},
+            {name: "Chennai Central", code: "MAS"}, {name: "Chennai Egmore", code: "MS"},
+            {name: "Bangalore City", code: "SBC"}, {name: "Yesvantpur Junction", code: "YPR"},
+            {name: "Secunderabad", code: "SC"}, {name: "Hyderabad Deccan", code: "HYB"},
+            {name: "Patna Junction", code: "PNBE"}, {name: "Danapur", code: "DNR"}, {name: "Barauni Junction", code: "BJU"}, {name: "Muzaffarpur", code: "MFP"}, {name: "Gaya", code: "GAYA"},
+            {name: "Lucknow Charbagh", code: "LKO"}, {name: "Kanpur Central", code: "CNB"}, {name: "Prayagraj Junction (Allahabad)", code: "PRYJ"}, {name: "Varanasi Junction", code: "BSB"}, {name: "Gorakhpur", code: "GKP"}, {name: "Ghaziabad", code: "GZB"},
+            {name: "Ahmedabad", code: "ADI"}, {name: "Surat", code: "ST"}, {name: "Vadodara", code: "BRC"},
+            {name: "Pune Junction", code: "PUNE"}, {name: "Nagpur", code: "NGP"},
+            {name: "Jaipur", code: "JP"}, {name: "Bhopal", code: "BPL"}, {name: "Indore", code: "INDB"},
+            {name: "Bhubaneswar", code: "BBS"}, {name: "Guwahati", code: "GHY"}, {name: "Chandigarh", code: "CDG"}
+        ];
 
-        fetch('/stations.json')
-            .then(res => {
-                if(!res.ok) throw new Error("File missing or 404");
-                return res.json();
-            })
-            .then(data => {
-                if (Array.isArray(data)) {
-                    stationsData = data;
-                } else if (data.features) { 
-                    stationsData = data.features.map(f => ({ name: f.properties.name, code: f.properties.code }));
-                } else if (typeof data === 'object') {
-                    stationsData = Object.keys(data).map(key => ({ code: key, name: data[key] }));
+        // Attempt to load full database securely
+        async function fetchFullDatabase() {
+            try {
+                const res = await fetch('/stations.json');
+                const text = await res.text();
+                
+                // CRITICAL FIX: If the file is actually an HTML error page, catch it and abort!
+                if (text.trim().startsWith('<')) {
+                    console.warn("Local stations.json is corrupt or an HTML file. Using the Failsafe list for the presentation.");
+                    return; 
                 }
-                
-                // UI Confirmation: The JSON loaded perfectly
-                sourceInputDisplay.placeholder = "Type station (e.g. ghaziabad)";
-                destInputDisplay.placeholder = "Type station (e.g. patna)";
-            })
-            .catch(err => {
-                // UI Error State: The JSON failed
-                console.error("Local stations.json failed:", err);
-                sourceInputDisplay.placeholder = "⚠️ Error: JSON not found";
-                destInputDisplay.placeholder = "⚠️ Error: JSON not found";
-                
-                // Provide a tiny fallback just so it doesn't hard-crash
-                stationsData = [
-                    {name: "Ghaziabad", code: "GZB"}, {name: "New Delhi", code: "NDLS"},
-                    {name: "Prayagraj (Allahabad)", code: "PRYJ"}, {name: "Kanpur", code: "CNB"}
-                ];
-            });
 
-        // --- 3. BULLETPROOF AUTOCOMPLETE ENGINE ---
+                const data = JSON.parse(text);
+                if (Array.isArray(data)) {
+                    // Successfully parsed the full database, overwrite the failsafe list
+                    stationsData = data;
+                }
+            } catch (err) {
+                console.warn("Could not fetch stations.json. Using the Failsafe list for the presentation.", err);
+            }
+        }
+        
+        // Run the fetch in the background
+        fetchFullDatabase();
+
+        // --- 3. AUTOCOMPLETE ENGINE ---
         function setupAutocomplete(displayId, hiddenId, suggestionsId) {
             const displayInput = document.getElementById(displayId);
             const hiddenInput = document.getElementById(hiddenId);
@@ -212,6 +223,7 @@
                     return;
                 }
 
+                // Filter logic
                 const matches = stationsData.filter(stn => {
                     const name = String(stn.name || stn.stationName || '').toLowerCase();
                     const code = String(stn.code || stn.stationCode || '').toLowerCase();
@@ -239,10 +251,16 @@
                         suggestionsBox.appendChild(li);
                     });
                 } else {
-                    suggestionsBox.classList.add('hidden');
+                    // Show a helpful message if no match is found
+                    const li = document.createElement('li');
+                    li.className = 'px-4 py-3 text-slate-400 text-sm italic';
+                    li.textContent = 'No matching stations found...';
+                    suggestionsBox.appendChild(li);
+                    suggestionsBox.classList.remove('hidden');
                 }
             });
 
+            // Close dropdowns if clicking elsewhere
             document.addEventListener('click', (e) => {
                 if (e.target !== displayInput && e.target !== suggestionsBox) {
                     suggestionsBox.classList.add('hidden');
@@ -262,7 +280,7 @@
             const destCode = document.getElementById('destination_station').value;
 
             if (!sourceCode || !destCode) {
-                alert("Please select your stations from the dropdown suggestions list.");
+                alert("Please select a valid station from the dropdown list so the AI can analyze the route.");
                 return;
             }
 
@@ -310,7 +328,7 @@
                     } else {
                         bar.className = "h-full rounded-full transition-all duration-700 ease-out bg-rose-500 shadow-lg shadow-rose-500/50";
                         badge.className = "inline-block text-xs font-extrabold px-4 py-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-400";
-                        details.innerText = "High waitlist number combined with short notice timeline indicates low confirmation probability.";
+                        details.innerText = "High waitlist number combined with timeline/route constraints indicates low confirmation probability.";
                     }
 
                     badge.innerText = data.status;
