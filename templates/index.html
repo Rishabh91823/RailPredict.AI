@@ -42,7 +42,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="relative">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">From Station</label>
-                            <input type="text" id="source_station_display" autocomplete="off" placeholder="Type station (e.g. New Delhi)" required 
+                            <input type="text" id="source_station_display" autocomplete="off" placeholder="Checking local files..." required 
                                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                             <input type="hidden" id="source_station" required>
                             <ul id="source_suggestions" class="absolute z-50 w-full bg-white border border-slate-200 rounded-xl mt-1 hidden max-h-56 overflow-y-auto shadow-2xl custom-scrollbar"></ul>
@@ -50,7 +50,7 @@
                         
                         <div class="relative">
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">To Station</label>
-                            <input type="text" id="dest_station_display" autocomplete="off" placeholder="Type station (e.g. Patna)" required 
+                            <input type="text" id="dest_station_display" autocomplete="off" placeholder="Checking local files..." required 
                                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                             <input type="hidden" id="destination_station" required>
                             <ul id="dest_suggestions" class="absolute z-50 w-full bg-white border border-slate-200 rounded-xl mt-1 hidden max-h-56 overflow-y-auto shadow-2xl custom-scrollbar"></ul>
@@ -148,12 +148,10 @@
             const maxDateStr = formatDate(maxDateObj);
 
             if (quotaSelect.value === "1") {
-                // Tatkal Mode: Lock exactly to tomorrow
                 dateInput.min = tomorrowStr;
                 dateInput.max = tomorrowStr;
                 dateInput.value = tomorrowStr;
             } else {
-                // General Mode: 0 to 60 days
                 dateInput.min = todayStr;
                 dateInput.max = maxDateStr;
             }
@@ -162,42 +160,43 @@
         quotaSelect.addEventListener('change', enforceDateRules);
         document.addEventListener('DOMContentLoaded', enforceDateRules);
 
-        // --- 2. AGGRESSIVE 7000+ STATION LOADER ---
-        let stationsData = [
-            {name: "New Delhi", code: "NDLS"}, {name: "Patna Junction", code: "PNBE"},
-            {name: "Mumbai CSMT", code: "CSMT"}, {name: "Howrah Junction", code: "HWH"},
-            {name: "Prayagraj Junction (Allahabad)", code: "PRYJ"}, {name: "Kanpur Central", code: "CNB"}
-        ];
+        // --- 2. LOCAL FILE STATION LOADER WITH UX FEEDBACK ---
+        let stationsData = [];
+        const sourceInputDisplay = document.getElementById('source_station_display');
+        const destInputDisplay = document.getElementById('dest_station_display');
 
-        function parseAndLoadStations(data) {
-            if (data.features) { 
-                stationsData = data.features.map(f => ({ name: f.properties.name, code: f.properties.code }));
-            } else if (Array.isArray(data)) {
-                stationsData = data;
-            } else if (typeof data === 'object') {
-                stationsData = Object.keys(data).map(key => ({ 
-                    code: key, 
-                    name: typeof data[key] === 'object' ? (data[key].name || data[key].stationName) : data[key] 
-                }));
-            }
-        }
-
-        // Layer 1: Try Local File. Layer 2: Try Web Database Fallback.
         fetch('/stations.json')
             .then(res => {
-                if(!res.ok) throw new Error("Local file failed");
+                if(!res.ok) throw new Error("File missing or 404");
                 return res.json();
             })
-            .then(data => parseAndLoadStations(data))
+            .then(data => {
+                if (Array.isArray(data)) {
+                    stationsData = data;
+                } else if (data.features) { 
+                    stationsData = data.features.map(f => ({ name: f.properties.name, code: f.properties.code }));
+                } else if (typeof data === 'object') {
+                    stationsData = Object.keys(data).map(key => ({ code: key, name: data[key] }));
+                }
+                
+                // UI Confirmation: The JSON loaded perfectly
+                sourceInputDisplay.placeholder = "Type station (e.g. ghaziabad)";
+                destInputDisplay.placeholder = "Type station (e.g. patna)";
+            })
             .catch(err => {
-                console.log("Local stations.json blocked. Falling back to official web DB...");
-                fetch('https://gist.githubusercontent.com/apsdehal/11393083/raw/stations.json')
-                    .then(res => res.json())
-                    .then(data => parseAndLoadStations(data))
-                    .catch(e => console.log("Web fetch failed too. Using built-in minimal fallback."));
+                // UI Error State: The JSON failed
+                console.error("Local stations.json failed:", err);
+                sourceInputDisplay.placeholder = "⚠️ Error: JSON not found";
+                destInputDisplay.placeholder = "⚠️ Error: JSON not found";
+                
+                // Provide a tiny fallback just so it doesn't hard-crash
+                stationsData = [
+                    {name: "Ghaziabad", code: "GZB"}, {name: "New Delhi", code: "NDLS"},
+                    {name: "Prayagraj (Allahabad)", code: "PRYJ"}, {name: "Kanpur", code: "CNB"}
+                ];
             });
 
-        // --- 3. AUTOCOMPLETE ENGINE ---
+        // --- 3. BULLETPROOF AUTOCOMPLETE ENGINE ---
         function setupAutocomplete(displayId, hiddenId, suggestionsId) {
             const displayInput = document.getElementById(displayId);
             const hiddenInput = document.getElementById(hiddenId);
@@ -213,10 +212,9 @@
                     return;
                 }
 
-                // Increased limit to 50 results to show more Tier 2/3 stations
                 const matches = stationsData.filter(stn => {
-                    const name = (stn.name || stn.stationName || '').toLowerCase();
-                    const code = (stn.code || stn.stationCode || '').toLowerCase();
+                    const name = String(stn.name || stn.stationName || '').toLowerCase();
+                    const code = String(stn.code || stn.stationCode || '').toLowerCase();
                     return name.includes(query) || code.includes(query);
                 }).slice(0, 50); 
 
@@ -329,4 +327,3 @@
     </script>
 </body>
 </html>
-
