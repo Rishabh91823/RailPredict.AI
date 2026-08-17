@@ -7,7 +7,6 @@ import joblib
 
 app = Flask(__name__)
 
-# Absolute Pathing ensures Flask finds your files no matter where you run the script from
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_FILE = os.path.join(BASE_DIR, 'railway_model_1cr.pkl')
 
@@ -87,7 +86,6 @@ def predict():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-# Guaranteed to serve the file directly from your app directory
 @app.route('/stations.json')
 def serve_stations():
     return send_from_directory(BASE_DIR, 'stations.json', mimetype='application/json')
