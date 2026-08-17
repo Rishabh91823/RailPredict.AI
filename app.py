@@ -6,7 +6,10 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 import joblib
 
 app = Flask(__name__)
-MODEL_FILE = 'railway_model_1cr.pkl'
+
+# Absolute Pathing ensures Flask finds your files no matter where you run the script from
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_FILE = os.path.join(BASE_DIR, 'railway_model_1cr.pkl')
 
 if os.path.exists(MODEL_FILE):
     model = joblib.load(MODEL_FILE)
@@ -56,13 +59,12 @@ def predict():
         dest_code = data.get('destination_station', '')
         journey_date = data.get('journey_date', datetime.today().strftime('%Y-%m-%d'))
         waitlist_num = int(data.get('waitlist_number', 10))
-        travel_class = int(data.get('coach_type', 1))  # 0: SL, 1: 3AC, 2: 2AC, 3: 1AC
+        travel_class = int(data.get('coach_type', 1))
         quota = int(data.get('quota', 0))
         train_type = 0 
 
         days_left = calculate_days_left(journey_date)
 
-        # Strict real-world guardrails
         if days_left <= 2 and waitlist_num > 10:
             prob_rounded = 4.5
             status = "High Risk of Waitlist / Cancellation"
@@ -70,11 +72,9 @@ def predict():
             route_tier = evaluate_route_tier(src_code, dest_code)
             is_festival = check_is_festival(journey_date)
 
-            # Explicitly mapping columns to match model training features: ['route_tier', 'days_left', 'waitlist_num', 'train_type', 'class', 'quota', 'is_festival']
             features = pd.DataFrame([[route_tier, days_left, waitlist_num, train_type, travel_class, quota, is_festival]],
                                     columns=['route_tier', 'days_left', 'waitlist_num', 'train_type', 'class', 'quota', 'is_festival'])
             
-            # Apply class-specific modifier weights to ensure 1AC/2AC behave differently from Sleeper
             class_penalty = {0: 5.0, 1: 0.0, 2: -8.0, 3: -18.0}.get(travel_class, 0.0)
 
             prediction_prob = (model.predict_proba(features)[0][1] * 100) + class_penalty
@@ -83,29 +83,18 @@ def predict():
             
             status = "High Chance of Confirmation" if prob_rounded > 50 else "High Risk of Waitlist / Cancellation"
 
-        return jsonify({
-            'success': True,
-            'probability': prob_rounded,
-            'status': status
-        })
+        return jsonify({'success': True, 'probability': prob_rounded, 'status': status})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+# Guaranteed to serve the file directly from your app directory
 @app.route('/stations.json')
 def serve_stations():
-    return send_from_directory('.', 'stations.json', mimetype='application/json')
+    return send_from_directory(BASE_DIR, 'stations.json', mimetype='application/json')
 
 @app.route('/manifest.json')
 def serve_manifest():
-    return send_from_directory('.', 'manifest.json', mimetype='application/manifest+json')
-
-@app.route('/icon-512.png')
-def icon_512():
-    return send_from_directory('.', 'icon-512.png', mimetype='image/png')
-
-@app.route('/icon-192.png')
-def icon_192():
-    return send_from_directory('.', 'icon-192.png', mimetype='image/png')
+    return send_from_directory(BASE_DIR, 'manifest.json', mimetype='application/manifest+json')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
