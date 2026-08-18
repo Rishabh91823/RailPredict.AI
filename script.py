@@ -27,15 +27,13 @@ def train_model():
         max_depth=12, 
         random_state=42
     )
+    
     model.fit(X_train, y_train)
     print(f"Model training completed in {time.time() - model_start:.2f} seconds.")
-
-    # Model Evaluation
     y_pred = model.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
     print(f"\nModel Accuracy on Test Set: {acc * 100:.2f}%\n")
-
-    # Export model artifact
+    
     output_filename = 'railway_model_1cr.pkl'
     print(f"Exporting trained model to '{output_filename}'...")
     joblib.dump(model, output_filename)
