@@ -74,10 +74,24 @@ def predict():
             features = pd.DataFrame([[route_tier, days_left, waitlist_num, train_type, travel_class, quota, is_festival]],
                                     columns=['route_tier', 'days_left', 'waitlist_num', 'train_type', 'class', 'quota', 'is_festival'])
             
-            class_penalty = {0: 5.0, 1: 0.0, 2: -8.0, 3: -18.0}.get(travel_class, 0.0)
+            base_prob = model.predict_proba(features)[0][1] * 100
 
-            prediction_prob = (model.predict_proba(features)[0][1] * 100) + class_penalty
-            prediction_prob = np.clip(prediction_prob, 1.0, 99.0)
+            if days_left > 30:
+                wl_multiplier = 0.8  
+            elif days_left > 10:
+                wl_multiplier = 1.5 
+            else:
+                wl_multiplier = 3.5  
+                
+            waitlist_decay = waitlist_num * wl_multiplier
+e
+            days_bonus = (days_left / 60.0) * 12.0 
+            class_penalty = {0: 8.0, 1: 0.0, 2: -15.0, 3: -30.0}.get(travel_class, 0.0)
+
+         
+            prediction_prob = base_prob - waitlist_decay + days_bonus + class_penalty
+          
+            prediction_prob = np.clip(prediction_prob, 1.5, 98.5)
             prob_rounded = round(float(prediction_prob), 2)
             
             status = "High Chance of Confirmation" if prob_rounded > 50 else "High Risk of Waitlist / Cancellation"
@@ -85,6 +99,7 @@ def predict():
         return jsonify({'success': True, 'probability': prob_rounded, 'status': status})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
 
 @app.route('/stations.json')
 def serve_stations():
