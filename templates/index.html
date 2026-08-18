@@ -44,7 +44,7 @@
                             <input type="text" id="source_station_display" autocomplete="off" placeholder="Type station (e.g. NDLS)" required 
                                 class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-sm">
                             <input type="hidden" id="source_station" required>
-                            <!-- Z-index bumped to 100 to ensure it overlaps everything -->
+                           
                             <ul id="source_suggestions" class="absolute z-[100] w-full bg-white border border-slate-200 rounded-xl mt-1 hidden max-h-56 overflow-y-auto shadow-2xl custom-scrollbar"></ul>
                         </div>
                         
@@ -93,7 +93,6 @@
                 </form>
             </div>
 
-            <!-- Right Results Display Column -->
             <div class="md:col-span-5 flex flex-col justify-center">
                 <div id="resultsCard" class="bg-slate-800/60 border border-slate-700/60 rounded-3xl p-8 backdrop-blur-md shadow-2xl flex flex-col justify-center min-h-[360px] text-center">
                     
@@ -124,7 +123,6 @@
     </main>
 
     <script>
-        // --- 1. DYNAMIC DATE LOGIC FOR TATKAL & GENERAL ---
         const quotaSelect = document.getElementById('quota');
         const dateInput = document.getElementById('journey_date');
 
@@ -148,12 +146,12 @@
             const maxDateStr = formatDate(maxDateObj);
 
             if (quotaSelect.value === "1") {
-                // Tatkal Mode: Lock exactly to tomorrow
+        
                 dateInput.min = tomorrowStr;
                 dateInput.max = tomorrowStr;
                 dateInput.value = tomorrowStr;
             } else {
-                // General Mode: 0 to 60 days
+          
                 dateInput.min = todayStr;
                 dateInput.max = maxDateStr;
                 if(dateInput.value === tomorrowStr && !dateInput.defaultValue) {
@@ -165,7 +163,7 @@
         quotaSelect.addEventListener('change', enforceDateRules);
         document.addEventListener('DOMContentLoaded', enforceDateRules);
 
-        // --- 2. PRESENTATION FAILSAFE STATION LIST (Covers 99% of demo needs) ---
+      
         let stationsData = [
             // Tier 1 & 2 Hubs
             {name: "New Delhi", code: "NDLS"}, {name: "Anand Vihar Terminal", code: "ANVT"}, {name: "Hazrat Nizamuddin", code: "NZM"},
@@ -182,13 +180,13 @@
             {name: "Bhubaneswar", code: "BBS"}, {name: "Guwahati", code: "GHY"}, {name: "Chandigarh", code: "CDG"}
         ];
 
-        // Attempt to load full database securely
+
         async function fetchFullDatabase() {
             try {
                 const res = await fetch('/stations.json');
                 const text = await res.text();
                 
-                // CRITICAL FIX: If the file is actually an HTML error page, catch it and abort!
+  
                 if (text.trim().startsWith('<')) {
                     console.warn("Local stations.json is corrupt or an HTML file. Using the Failsafe list for the presentation.");
                     return; 
@@ -196,7 +194,7 @@
 
                 const data = JSON.parse(text);
                 if (Array.isArray(data)) {
-                    // Successfully parsed the full database, overwrite the failsafe list
+  
                     stationsData = data;
                 }
             } catch (err) {
@@ -204,10 +202,8 @@
             }
         }
         
-        // Run the fetch in the background
         fetchFullDatabase();
 
-        // --- 3. AUTOCOMPLETE ENGINE ---
         function setupAutocomplete(displayId, hiddenId, suggestionsId) {
             const displayInput = document.getElementById(displayId);
             const hiddenInput = document.getElementById(hiddenId);
@@ -223,7 +219,6 @@
                     return;
                 }
 
-                // Filter logic
                 const matches = stationsData.filter(stn => {
                     const name = String(stn.name || stn.stationName || '').toLowerCase();
                     const code = String(stn.code || stn.stationCode || '').toLowerCase();
@@ -251,7 +246,7 @@
                         suggestionsBox.appendChild(li);
                     });
                 } else {
-                    // Show a helpful message if no match is found
+        
                     const li = document.createElement('li');
                     li.className = 'px-4 py-3 text-slate-400 text-sm italic';
                     li.textContent = 'No matching stations found...';
@@ -260,7 +255,7 @@
                 }
             });
 
-            // Close dropdowns if clicking elsewhere
+
             document.addEventListener('click', (e) => {
                 if (e.target !== displayInput && e.target !== suggestionsBox) {
                     suggestionsBox.classList.add('hidden');
@@ -271,7 +266,7 @@
         setupAutocomplete('source_station_display', 'source_station', 'source_suggestions');
         setupAutocomplete('dest_station_display', 'destination_station', 'dest_suggestions');
 
-        // --- 4. PREDICTION SUBMIT LOGIC ---
+ 
         document.getElementById('predictionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
