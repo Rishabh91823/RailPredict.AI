@@ -58,15 +58,19 @@ def predict():
         dest_code = data.get('destination_station', '')
         journey_date = data.get('journey_date', datetime.today().strftime('%Y-%m-%d'))
         waitlist_num = int(data.get('waitlist_number', 10))
-        travel_class = int(data.get('coach_type', 1))
+        travel_class = int(data.get('coach_type', 1))  
         quota = int(data.get('quota', 0))
         train_type = 0 
 
         days_left = calculate_days_left(journey_date)
-
-        if days_left <= 2 and waitlist_num > 10:
+        if days_left <= 2 and travel_class in [2, 3] and waitlist_num >= 3:
+            prob_rounded = 2.5
+            status = "High Risk of Waitlist / Cancellation"
+        
+        elif days_left <= 2 and waitlist_num >= 10:
             prob_rounded = 4.5
             status = "High Risk of Waitlist / Cancellation"
+            
         else:
             route_tier = evaluate_route_tier(src_code, dest_code)
             is_festival = check_is_festival(journey_date)
@@ -75,22 +79,21 @@ def predict():
                                     columns=['route_tier', 'days_left', 'waitlist_num', 'train_type', 'class', 'quota', 'is_festival'])
             
             base_prob = model.predict_proba(features)[0][1] * 100
-
+            
             if days_left > 30:
-                wl_multiplier = 0.8  
+                wl_multiplier = 0.8
             elif days_left > 10:
-                wl_multiplier = 1.5 
+                wl_multiplier = 1.5
             else:
-                wl_multiplier = 3.5  
+                wl_multiplier = 3.5
                 
             waitlist_decay = waitlist_num * wl_multiplier
-e
             days_bonus = (days_left / 60.0) * 12.0 
-            class_penalty = {0: 8.0, 1: 0.0, 2: -15.0, 3: -30.0}.get(travel_class, 0.0)
 
-         
+            class_penalty = {0: 8.0, 1: 0.0, 2: -25.0, 3: -45.0}.get(travel_class, 0.0)
+
             prediction_prob = base_prob - waitlist_decay + days_bonus + class_penalty
-          
+            
             prediction_prob = np.clip(prediction_prob, 1.5, 98.5)
             prob_rounded = round(float(prediction_prob), 2)
             
@@ -99,7 +102,6 @@ e
         return jsonify({'success': True, 'probability': prob_rounded, 'status': status})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-
 
 @app.route('/stations.json')
 def serve_stations():
