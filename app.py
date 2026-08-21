@@ -2,8 +2,9 @@ import os
 from datetime import datetime
 import numpy as np
 import pandas as pd
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import joblib
+
 
 app = Flask(__name__)
 
@@ -55,7 +56,9 @@ def check_local_festival(src_code, dest_code, journey_date):
                     return 1
     return 0
 
-@app.route('/predict', methods=['POST'])
+@app.route('/')
+def home():
+    return render_template('index.html')
 def predict():
     try:
         data = request.get_json()
