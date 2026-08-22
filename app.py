@@ -1,133 +1,99 @@
-import os
 from datetime import datetime
-import numpy as np
+import json
 import pandas as pd
-from flask import Flask, request, jsonify, render_template
 import joblib
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
-
 MODEL_FILE = 'railway_model_1cr.pkl'
+
 try:
     model = joblib.load(MODEL_FILE)
-except:
+except Exception:
     model = None
-
-HIGH_DEMAND_CODES = {'NDLS', 'HWH', 'CSMT', 'PNBE', 'PRYJ', 'ERS'}
+HIGH_DEMAND= {
+    'NDLS', 'CSMT', 'HWH', 'MAS', 'SBC', 'PNBE', 'LKO', 'ERS', 'SC', 'PRYJ'
+}
 
 STATION_STATES = {
-    'CSMT': 'Maharashtra', 'PUNE': 'Maharashtra', 'NGP': 'Maharashtra', 'LTT': 'Maharashtra', 
-    'DR': 'Maharashtra', 'BCT': 'Maharashtra', 'BDTS': 'Maharashtra', 'KYN': 'Maharashtra', 
-    'TNA': 'Maharashtra', 'BSL': 'Maharashtra', 'AK': 'Maharashtra', 'SUR': 'Maharashtra', 
-    'MRJ': 'Maharashtra', 'KOP': 'Maharashtra', 'MMR': 'Maharashtra', 'NK': 'Maharashtra',
-    'ERS': 'Kerala', 'TVC': 'Kerala', 'KTYM': 'Kerala', 'TCR': 'Kerala', 
-    'SRR': 'Kerala', 'CLT': 'Kerala', 'CAN': 'Kerala', 'QLN': 'Kerala', 
-    'CNGR': 'Kerala', 'PGT': 'Kerala', 'KCVL': 'Kerala', 'ALLP': 'Kerala', 
-    'ERN': 'Kerala', 'TRVL': 'Kerala',
-    'PNBE': 'Bihar', 'MFP': 'Bihar', 'DBG': 'Bihar', 'GAYA': 'Bihar', 
-    'BJU': 'Bihar', 'SPJ': 'Bihar', 'KIR': 'Bihar', 'CPR': 'Bihar', 
-    'BGP': 'Bihar', 'ARA': 'Bihar', 'PPTA': 'Bihar', 'RJPB': 'Bihar', 
-    'RXL': 'Bihar', 'SHC': 'Bihar', 'BXR': 'Bihar', 'MBI': 'Bihar',
-    'HWH': 'West_Bengal', 'SDAH': 'West_Bengal', 'KGP': 'West_Bengal', 'KOAA': 'West_Bengal', 
-    'NJP': 'West_Bengal', 'ASN': 'West_Bengal', 'BWN': 'West_Bengal', 'MLDT': 'West_Bengal', 
-    'SRC': 'West_Bengal', 'BDC': 'West_Bengal', 'BQA': 'West_Bengal', 'PRR': 'West_Bengal'
+    'NDLS': 'Delhi', 'ANVT': 'Delhi', 'NZM': 'Delhi',
+    'CSMT': 'Maharashtra', 'BCT': 'Maharashtra', 'LTT': 'Maharashtra', 'BDTS': 'Maharashtra', 'PUNE': 'Maharashtra', 'NGP': 'Maharashtra', 'NK': 'Maharashtra', 'BSL': 'Maharashtra', 'KYN': 'Maharashtra', 'ST': 'Maharashtra',
+    'HWH': 'West_Bengal', 'SDAH': 'West_Bengal', 'KOAA': 'West_Bengal', 'BWN': 'West_Bengal', 'HDB': 'West_Bengal', 'ASN': 'West_Bengal', 'MLDT': 'West_Bengal', 'BGP': 'West_Bengal',
+    'MAS': 'Tamil_Nadu', 'MS': 'Tamil_Nadu',
+    'SBC': 'Karnataka', 'YPR': 'Karnataka',
+    'SC': 'Telangana', 'HYB': 'Telangana',
+    'PNBE': 'Bihar', 'DNR': 'Bihar', 'BJU': 'Bihar', 'MFP': 'Bihar', 'GAYA': 'Bihar',
+    'LKO': 'Uttar_Pradesh', 'CNB': 'Uttar_Pradesh', 'PRYJ': 'Uttar_Pradesh', 'BSB': 'Uttar_Pradesh', 'GKP': 'Uttar_Pradesh',
+    'ERS': 'Kerala', 'TVC': 'Kerala', 'KTYM': 'Kerala', 'TCR': 'Kerala', 'CLT': 'Kerala',
+    'ADI': 'Gujarat', 'ST': 'Gujarat'
 }
 
-STATE_FESTIVALS = {
-    'Bihar': [(10, 11)],
-    'Kerala': [(8, 9)],
-    'West_Bengal': [(9, 10)],
-    'Maharashtra': [(8, 9)]
+FESTIVALS = {
+    'Bihar': (10, 11),    
+    'Kerala': (8, 9),            
+    'West_Bengal': (9, 10),      
+    'Maharashtra': (8, 9),       
+    'Uttar_Pradesh': (10, 11),   
+    'Tamil_Nadu': (1, 1)         
 }
+CLASS_PENALTY = {0: 15, 1: 0, 2: -10, 3: -30}
+FEATURES = ['route_tier', 'days_left', 'waitlist_num', 'train_type', 'class', 'quota', 'is_festival']
 
-def evaluate_route_tier(src_code, dest_code):
-    if src_code in HIGH_DEMAND_CODES or dest_code in HIGH_DEMAND_CODES:
-        return 1
-    return 2
+def days_left(date):
+    return (datetime.strptime(date, '%Y-%m-%d') - datetime.today()).days
 
-def calculate_days_left(date_str):
-    journey = datetime.strptime(date_str, '%Y-%m-%d')
-    return (journey - datetime.today()).days
 
-def check_local_festival(src_code, dest_code, journey_date):
-    dt = datetime.strptime(journey_date, '%Y-%m-%d')
-    month = dt.month
-    
-    states_involved = set()
-    if src_code in STATION_STATES:
-        states_involved.add(STATION_STATES[src_code])
-    if dest_code in STATION_STATES:
-        states_involved.add(STATION_STATES[dest_code])
-        
-    for state in states_involved:
-        if state in STATE_FESTIVALS:
-            for start_mo, end_mo in STATE_FESTIVALS[state]:
-                if start_mo <= month <= end_mo:
-                    return 1
-    return 0
+def festival(src, dest, date):
+    month = datetime.strptime(date, '%Y-%m-%d').month
+    return int(any(
+        state in FESTIVALS and FESTIVALS[state][0] <= month <= FESTIVALS[state][1]
+        for state in {STATION_STATES.get(src), STATION_STATES.get(dest)} if state
+    ))
 
-@app.route('/')
+
+@app.get('/')
 def home():
     return render_template('index.html')
 
-@app.route('/predict', methods=['POST'])
+
+@app.get('/stations.json')
+def stations():
+    with open('stations.json', encoding='utf-8') as f:
+        return jsonify(json.load(f))
+
+
+@app.post('/predict')
 def predict():
     try:
-        data = request.get_json()
-        
-        src_code = data.get('source_station', '')
-        dest_code = data.get('destination_station', '')
-        journey_date = data.get('journey_date', datetime.today().strftime('%Y-%m-%d'))
-        waitlist_num = int(data.get('waitlist_number', 10))
-        travel_class = int(data.get('coach_type', 1))
+        data = request.get_json() or {}
+        src, dest = data.get('source_station', ''), data.get('destination_station', '')
+        date = data.get('journey_date', datetime.today().strftime('%Y-%m-%d'))
+        wl = int(data.get('waitlist_number', 10))
+        cls = int(data.get('coach_type', 1))
         quota = int(data.get('quota', 0))
-        train_type = 0 
+        days = days_left(date)
 
-        days_left = calculate_days_left(journey_date)
+        tier = int(src in HIGH_DEMAND or dest in HIGH_DEMAND) + 1
+        fest = festival(src, dest, date)
+        features = pd.DataFrame([[tier, days, wl, 0, cls, quota, fest]], columns=FEATURES)
+    
+        base = model.predict_proba(features)[0][1] * 100 if model else 95 
 
-        if days_left <= 2 and travel_class in [2, 3] and waitlist_num >= 3:
-            prob_rounded = 2.5
-            status = "High Risk of Waitlist / Cancellation"
-            
-        elif days_left <= 2 and waitlist_num >= 10:
-            prob_rounded = 4.5
-            status = "High Risk of Waitlist / Cancellation"
-            
+        if wl > 40:
+            wl_penalty = 50 + (wl - 40) * 0.1 
         else:
-            route_tier = evaluate_route_tier(src_code, dest_code)
-            is_festival = check_local_festival(src_code, dest_code, journey_date)
+            wl_penalty = wl * 0.2 
+        
+        time_penalty = 40 if days < 5 else 0
+        
+        prob = base - wl_penalty - time_penalty + CLASS_PENALTY.get(cls, 0) - (50 * fest)
+        prob = round(max(1.5, min(98.5, float(prob))), 2)
 
-            features = pd.DataFrame([[route_tier, days_left, waitlist_num, train_type, travel_class, quota, is_festival]],
-                                    columns=['route_tier', 'days_left', 'waitlist_num', 'train_type', 'class', 'quota', 'is_festival'])
-            
-            if model:
-                base_prob = model.predict_proba(features)[0][1] * 100
-            else:
-                base_prob = 75.0
-            
-            if days_left > 30:
-                wl_multiplier = 0.8
-            elif days_left > 10:
-                wl_multiplier = 1.5
-            else:
-                wl_multiplier = 3.5
-                
-            waitlist_decay = waitlist_num * wl_multiplier
-            days_bonus = (days_left / 60.0) * 12.0 
-
-            class_penalty = {0: 8.0, 1: 0.0, 2: -25.0, 3: -45.0}.get(travel_class, 0.0)
-            regional_penalty = -25.0 if is_festival == 1 else 0.0
-
-            prediction_prob = base_prob - waitlist_decay + days_bonus + class_penalty + regional_penalty
-            
-            prediction_prob = np.clip(prediction_prob, 1.5, 98.5)
-            prob_rounded = round(float(prediction_prob), 2)
-            
-            status = "High Chance of Confirmation" if prob_rounded > 50 else "High Risk of Waitlist / Cancellation"
-
-        return jsonify({'success': True, 'probability': prob_rounded, 'status': status})
+        return jsonify(success=True, probability=prob,
+                       status='High Chance of Confirmation' if prob > 50 else 'High Risk of Waitlist / Cancellation')
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify(success=False, error=str(e)), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)
