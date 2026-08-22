@@ -5,7 +5,6 @@ import pandas as pd
 from flask import Flask, request, jsonify, render_template
 import joblib
 
-
 app = Flask(__name__)
 
 MODEL_FILE = 'railway_model_1cr.pkl'
@@ -17,10 +16,21 @@ except:
 HIGH_DEMAND_CODES = {'NDLS', 'HWH', 'CSMT', 'PNBE', 'PRYJ', 'ERS'}
 
 STATION_STATES = {
-    'PNBE': 'Bihar', 'MFP': 'Bihar', 'DBG': 'Bihar', 'GAYA': 'Bihar',
-    'ERS': 'Kerala', 'TVC': 'Kerala', 'KTYM': 'Kerala', 'TCR': 'Kerala',
-    'HWH': 'West_Bengal', 'SDAH': 'West_Bengal', 'KGP': 'West_Bengal',
-    'CSMT': 'Maharashtra', 'PUNE': 'Maharashtra', 'NGP': 'Maharashtra'
+    'CSMT': 'Maharashtra', 'PUNE': 'Maharashtra', 'NGP': 'Maharashtra', 'LTT': 'Maharashtra', 
+    'DR': 'Maharashtra', 'BCT': 'Maharashtra', 'BDTS': 'Maharashtra', 'KYN': 'Maharashtra', 
+    'TNA': 'Maharashtra', 'BSL': 'Maharashtra', 'AK': 'Maharashtra', 'SUR': 'Maharashtra', 
+    'MRJ': 'Maharashtra', 'KOP': 'Maharashtra', 'MMR': 'Maharashtra', 'NK': 'Maharashtra',
+    'ERS': 'Kerala', 'TVC': 'Kerala', 'KTYM': 'Kerala', 'TCR': 'Kerala', 
+    'SRR': 'Kerala', 'CLT': 'Kerala', 'CAN': 'Kerala', 'QLN': 'Kerala', 
+    'CNGR': 'Kerala', 'PGT': 'Kerala', 'KCVL': 'Kerala', 'ALLP': 'Kerala', 
+    'ERN': 'Kerala', 'TRVL': 'Kerala',
+    'PNBE': 'Bihar', 'MFP': 'Bihar', 'DBG': 'Bihar', 'GAYA': 'Bihar', 
+    'BJU': 'Bihar', 'SPJ': 'Bihar', 'KIR': 'Bihar', 'CPR': 'Bihar', 
+    'BGP': 'Bihar', 'ARA': 'Bihar', 'PPTA': 'Bihar', 'RJPB': 'Bihar', 
+    'RXL': 'Bihar', 'SHC': 'Bihar', 'BXR': 'Bihar', 'MBI': 'Bihar',
+    'HWH': 'West_Bengal', 'SDAH': 'West_Bengal', 'KGP': 'West_Bengal', 'KOAA': 'West_Bengal', 
+    'NJP': 'West_Bengal', 'ASN': 'West_Bengal', 'BWN': 'West_Bengal', 'MLDT': 'West_Bengal', 
+    'SRC': 'West_Bengal', 'BDC': 'West_Bengal', 'BQA': 'West_Bengal', 'PRR': 'West_Bengal'
 }
 
 STATE_FESTIVALS = {
@@ -59,6 +69,8 @@ def check_local_festival(src_code, dest_code, journey_date):
 @app.route('/')
 def home():
     return render_template('index.html')
+
+@app.route('/predict', methods=['POST'])
 def predict():
     try:
         data = request.get_json()
