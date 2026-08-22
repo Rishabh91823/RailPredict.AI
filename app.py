@@ -11,8 +11,24 @@ try:
     model = joblib.load(MODEL_FILE)
 except Exception:
     model = None
-HIGH_DEMAND= {
-    'NDLS', 'CSMT', 'HWH', 'MAS', 'SBC', 'PNBE', 'LKO', 'ERS', 'SC', 'PRYJ'
+HIGH_DEMAND = {
+    'NDLS', 'NZM', 'DLI', 'ANVT', 'DEE',
+    'CSMT', 'BCT', 'BDTS', 'LTT', 'DR', 'KYN', 'TNA',
+    'HWH', 'SDAH', 'KOAA', 'SRC',
+    'MAS', 'MS', 'TBM', 'CGL', 'CBE', 'MDU', 'TPJ',
+    'SBC', 'YPR', 'BNC', 'UBL', 'MYS',
+    'SC', 'HYB', 'KCG', 'KZJ',
+    'PUNE', 'NGP', 'SUR', 'NK', 'BSL',
+    'LKO', 'CNB', 'PRYJ', 'ALD', 'AGC', 'GZB', 'MGS', 'DDU', 'BSB',
+    'PNBE', 'RJPB', 'GAYA', 'MFP', 'BJU', 'DBG', 'KIR',
+    'ERS', 'ERN', 'TVC', 'KTYM', 'TCR', 'CLT', 'CAN', 'QLN', 'SRR',
+    'JP', 'AII', 'JU', 'KOTA', 'BKN', 'AWR',
+    'ADI', 'ST', 'BRC', 'RJT', 'BCT',
+    'BPL', 'ET', 'JBP', 'INDB', 'RTM', 'R', 'BSP',
+    'ASR', 'LDH', 'JUC', 'JRC', 'UMB', 'CDG', 'BTI',
+    'HWH', 'SDAH', 'KGP', 'ASN', 'NJP', 'MLDT',
+    'BBS', 'CTC', 'KUR', 'TATA', 'RNC', 'DHN', 'BKSC',
+    'VSKP', 'BZA', 'GNT', 'TPTY', 'RU', 'GDR', 'OGL'
 }
 
 STATION_STATES = {
